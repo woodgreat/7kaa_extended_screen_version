@@ -1,0 +1,18 @@
+# 解压的源码目录
+original_extracted/
+android_extracted/
+
+# 编译产物
+build/
+*.o
+*.exe
+*.dll
+
+# 临时文件
+*.tmp
+*.bak
+release/linux/7kaa_hd_linux/
+
+# 发布包（二进制太大，只放源码，二进制放 Releases）
+release/
+run/
