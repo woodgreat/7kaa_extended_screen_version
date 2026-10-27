@@ -1,0 +1,6 @@
+CRC.o: CRC.cpp /usr/include/stdc-predef.h ../../../include/config.h \
+ ../../../include/CRC.h ../../../include/asmfun.h
+/usr/include/stdc-predef.h:
+../../../include/config.h:
+../../../include/CRC.h:
+../../../include/asmfun.h:

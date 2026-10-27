@@ -1,0 +1,8 @@
+IR_M.o: IR_M.cpp /usr/include/stdc-predef.h ../../../include/config.h \
+ ../../../include/IMGFUN.h ../../../include/asmfun.h \
+ ../../../include/COLCODE.h
+/usr/include/stdc-predef.h:
+../../../include/config.h:
+../../../include/IMGFUN.h:
+../../../include/asmfun.h:
+../../../include/COLCODE.h:

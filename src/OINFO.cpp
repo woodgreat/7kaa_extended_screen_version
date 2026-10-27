@@ -18,8 +18,22 @@
  *
  */
 
-//Filename    : OINFO.CPP
-//Description : Info class
+//===========================================================================
+// Filename    : OINFO.CPP
+// Description : Info class - HD widescreen support with mirror-tiling
+//
+// Modified    : 2026-10-27
+// Modifier    : longxiaoxia, wood
+//
+// Changes     :
+//   - Added wide_compose() for high-resolution background composition
+//   - Added wide_mirror() for seamless mirror-tiling algorithm
+//   - Right panel downward mirror-tiling (avoid golden line at y=584)
+//   - Crop region y=300..573 for stone brick texture
+//   - b1 starts in reverse order for seamless connection
+//   - Bottom golden line preserved via relative position mapping
+//   - Version display appends "EX" suffix (in OGAMMAIN.cpp)
+//===========================================================================
 
 #include <time.h>
 #include <string.h>
@@ -287,15 +301,21 @@ void Info::next_day()
 #define WIDE_STONE_Y0     300
 #define WIDE_STONE_H      100
 #define WIDE_BOTTOM_H     10
+// Right panel stone texture for downward tiling
+// Golden line at y=584..586 (actual position), crop y=300..573 (exclude golden line)
+#define WIDE_GOLD_LINE_Y    584
+#define WIDE_RPANEL_CROP_Y0 300
+#define WIDE_RPANEL_CROP_H  (WIDE_GOLD_LINE_Y - 10 - WIDE_RPANEL_CROP_Y0)  // 274, exclude golden line
 
 static char* wide_img = NULL;
 static int   wide_img_w = 0, wide_img_h = 0, wide_img_rx = -1;
 
-// index in a mirror-tiled run of length per: 0..per-1, per-1..0, 0..per-1, ...
+// index in a mirror-tiled run of length per: per-1..0, 0..per-1, per-1..0, ...
+// starts with reverse order so the first tile mirrors the source above
 static int wide_mirror(int k, int per)
 {
 	int t = k / per, r = k % per;
-	return (t & 1) ? per-1-r : r;
+	return (t & 1) ? r : per-1-r;
 }
 
 static void wide_compose(int W, int H, int rx)
@@ -336,7 +356,29 @@ static void wide_compose(int W, int H, int rx)
 		{
 			unsigned char v;
 			if( x >= rx && x < rx+224 )				// right block
-				v = src[ry*WIDE_SRC_W + WIDE_LEFT_W + (x-rx)];
+			{
+				if( y < H-WIDE_BOTTOM_H )
+				{
+					if( y < WIDE_GOLD_LINE_Y )
+						v = src[y*WIDE_SRC_W + WIDE_LEFT_W + (x-rx)];
+					else
+					{
+						// Mirror-tile from y=596 onwards (including golden line area)
+						// This removes the golden line separator, making the right panel seamless
+						int k = y - WIDE_GOLD_LINE_Y;
+						int idx = wide_mirror(k, WIDE_RPANEL_CROP_H);
+						int ry2 = WIDE_RPANEL_CROP_Y0 + idx;
+						v = src[ry2*WIDE_SRC_W + WIDE_LEFT_W + (x-rx)];
+					}
+				}
+				else
+				{
+					// Bottom frame: use original bottom edge (y=590..599, including golden line)
+					int ry3 = (WIDE_SRC_H - WIDE_BOTTOM_H) + (y - (H-WIDE_BOTTOM_H));
+					if( ry3 >= WIDE_SRC_H ) ry3 = WIDE_SRC_H - 1;
+					v = src[ry3*WIDE_SRC_W + WIDE_LEFT_W + (x-rx)];
+				}
+			}
 			else if( y < WIDE_TOP_H )				// top bar
 			{
 				if( x < WIDE_LEFT_W )

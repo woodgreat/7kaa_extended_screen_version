@@ -1,0 +1,8 @@
+IB_TRD.o: IB_TRD.cpp /usr/include/stdc-predef.h ../../../include/config.h \
+ ../../../include/IMGFUN.h ../../../include/asmfun.h \
+ ../../../include/COLCODE.h
+/usr/include/stdc-predef.h:
+../../../include/config.h:
+../../../include/IMGFUN.h:
+../../../include/asmfun.h:
+../../../include/COLCODE.h:

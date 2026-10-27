@@ -11,8 +11,6 @@ build/
 # 临时文件
 *.tmp
 *.bak
-release/linux/7kaa_hd_linux/
 
-# 发布包（二进制太大，只放源码，二进制放 Releases）
-release/
-run/
+# 分发目录（二进制发布包，手动上传）
+dist/

@@ -1,0 +1,7 @@
+I_EREMAP.o: I_EREMAP.cpp /usr/include/stdc-predef.h \
+ ../../../include/config.h ../../../include/IMGFUN.h \
+ ../../../include/asmfun.h
+/usr/include/stdc-predef.h:
+../../../include/config.h:
+../../../include/IMGFUN.h:
+../../../include/asmfun.h:

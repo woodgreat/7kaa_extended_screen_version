@@ -1,0 +1,8 @@
+IB_AT.o: IB_AT.cpp /usr/include/stdc-predef.h ../../../include/config.h \
+ ../../../include/IMGFUN.h ../../../include/asmfun.h \
+ ../../../include/COLCODE.h
+/usr/include/stdc-predef.h:
+../../../include/config.h:
+../../../include/IMGFUN.h:
+../../../include/asmfun.h:
+../../../include/COLCODE.h:

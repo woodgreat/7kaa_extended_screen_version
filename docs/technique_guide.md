@@ -80,21 +80,35 @@ Decompose the game interface into **fixed regions** and **variable regions**:
 
 The `MAINSCR` in original `I_IF.RES` is an 800x600 8-bit bitmap containing:
 
-| 区域 | 列范围 | 内容 |
-|------|--------|------|
-| 左侧 | 0-575 | 顶部栏按钮、游戏标题 |
-| 中间 | 424-575 | **石头纹理**（无文字/按钮） |
-| 右侧 | 576-799 | 地图模式按钮、小地图框、信息面板 |
+| 区域 | 列范围 | 行范围 | 内容 |
+|------|--------|--------|------|
+| 左侧 | 0-575 | 0-55 | 顶部栏按钮、游戏标题 |
+| 中间 | 424-575 | 0-55 | **石头纹理**（无文字/按钮） |
+| 右侧 | 576-799 | 0-99 | 地图模式按钮、小地图框、信息面板 |
+| 右侧 | 576-799 | 100-249 | 空白（小地图区域） |
+| 右侧 | 576-799 | 250-299 | 小地图边框 |
+| **右侧** | **576-799** | **300-583** | **石砖纹理**（按钮下方的贴图区） |
+| **右侧** | **576-799** | **584-586** | **金色边线**（分割线） |
+| 右侧 | 576-799 | 587-599 | 石砖 + 底部阴影 |
 
-| Region | Columns | Content |
-|--------|---------|---------|
-| Left | 0-575 | Top bar buttons, game title |
-| Middle | 424-575 | **Stone texture** (no text/buttons) |
-| Right | 576-799 | Map mode buttons, minimap frame, info panel |
+| Region | Columns | Rows | Content |
+|--------|---------|------|---------|
+| Left | 0-575 | 0-55 | Top bar buttons, game title |
+| Middle | 424-575 | 0-55 | **Stone texture** (no text/buttons) |
+| Right | 576-799 | 0-99 | Map mode buttons, minimap frame, info panel |
+| Right | 576-799 | 100-249 | Blank (minimap area) |
+| Right | 576-799 | 250-299 | Minimap border |
+| **Right** | **576-799** | **300-583** | **Stone brick texture** (below buttons) |
+| **Right** | **576-799** | **584-586** | **Golden line** (separator) |
+| Right | 576-799 | 587-599 | Stone brick + bottom shadow |
 
-**关键洞察**: 中间的 152px 石头纹理（424-575）可以**无缝平铺**！
+**关键洞察 1**: 中间的 152px 石头纹理（424-575）可以**无缝平铺**！
 
-**Key Insight**: The middle 152px stone texture (424-575) can be **seamlessly tiled**!
+**Key Insight 1**: The middle 152px stone texture (424-575) can be **seamlessly tiled**!
+
+**关键洞察 2**: 右侧 y=300..583 是完整的石砖纹理区，可以**向下镜像延伸**，且**避开 y=584..586 的金色边线**！
+
+**Key Insight 2**: The right side y=300..583 is a complete stone brick texture area that can be **mirror-extended downward** while **avoiding the y=584..586 golden line**!
 
 **镜像平铺算法 / Mirror-Tiling Algorithm**:
 
@@ -409,3 +423,258 @@ This project is ported from the **Android community widescreen patch** (`0004-an
 GPL v2（与原版 7kaa 相同）
 
 GPL v2 (same as original 7kaa)
+
+
+---
+
+## 右侧竖条镜像拼接（进阶） / Right Panel Mirror-Tiling (Advanced)
+
+> 本节详细说明 2026-10-27 实现的右侧竖条向下镜像拼接技术，作为对早期"直接复制"方案的升级。
+
+### 问题背景 / Problem Statement
+
+早期方案在高分辨率下，右侧竖条（x=576..799）只是**直接复制**原图 600 行，导致：
+- y=600..H-1 区域没有内容（黑色或重复）
+- 操作区（按钮、小地图）和空白区之间有明显的分割线
+
+**Early approach**: At high resolutions, the right panel (x=576..799) was **directly copied** from the original 600 rows, causing:
+- y=600..H-1 area to be empty (black or repeated)
+- Visible separator between operation area and blank area
+
+### 右侧竖条结构分析 / Right Panel Structure Analysis
+
+通过像素分析工具（`/tmp/find_gold_line.cpp`），精确定位右侧竖条各区域：
+
+**MAINSCR 右侧竖条（x=576..799）结构**：
+
+| y 范围 | 高度 | 内容 | 处理方式 |
+|--------|------|------|----------|
+| 0..99 | 100px | 按钮区（地图模式、菜单等） | 直接复制 |
+| 100..249 | 150px | 小地图显示区 | 直接复制 |
+| 250..299 | 50px | 小地图边框 | 直接复制 |
+| 300..583 | 284px | **石砖纹理区** | **镜像拼接源** |
+| **584..586** | **3px** | **金色边线（分割线）** | **避开！** |
+| 587..599 | 13px | 石砖 + 底部阴影 | 直接复制 |
+
+**MAINSCR Right Panel (x=576..799) Structure**:
+
+| y Range | Height | Content | Handling |
+|---------|--------|---------|----------|
+| 0..99 | 100px | Buttons (map mode, menu, etc.) | Direct copy |
+| 100..249 | 150px | Minimap display area | Direct copy |
+| 250..299 | 50px | Minimap border | Direct copy |
+| 300..583 | 284px | **Stone brick texture** | **Mirror-tile source** |
+| **584..586** | **3px** | **Golden line (separator)** | **Avoid!** |
+| 587..599 | 13px | Stone brick + bottom shadow | Direct copy |
+
+### 金色边线识别 / Golden Line Identification
+
+**关键发现**：金线不在 y=596（最初猜测），而在 **y=584..586**！
+
+**Key finding**: The golden line is not at y=596 (initial guess), but at **y=584..586**!
+
+**识别方法 / Identification Method**:
+
+通过分析像素值特征（`/tmp/find_gold_line` 工具）：
+- **金线特征**：高亮度像素值（154-156），横向连续
+- **石砖特征**：中等亮度（89-91），随机分布
+
+**Pixel value analysis**:
+```
+y=583: x=592 → 156, x=596 → 90  ← 石砖区结束
+y=584: x=592 → 155, x=596 → 89  ← 金线开始（高亮度）
+y=585: x=592 → 156, x=596 → 90  ← 金线 peak
+y=586: x=592 → 109, x=596 → 90  ← 金线结束
+y=587: x=592 → 154, x=596 → 91  ← 石砖区恢复
+```
+
+**关键代码 / Key Code**:
+```cpp
+#define WIDE_GOLD_LINE_Y    584  // 金线实际位置（不是 596！）
+#define WIDE_RPANEL_CROP_Y0 300  // 截取起始行
+#define WIDE_RPANEL_CROP_H  (WIDE_GOLD_LINE_Y - 10 - WIDE_RPANEL_CROP_Y0)  // 274
+```
+
+### 镜像拼接算法 / Mirror-Tiling Algorithm
+
+#### 1. 截取区域 / Crop Region
+
+**截取范围**: y=300..573（274 行），**避开金线 y=584..586**！
+
+**Crop range**: y=300..573 (274 rows), **avoiding golden line y=584..586**!
+
+**为什么留 10px 缓冲？/ Why 10px buffer?**
+- 金线在 y=584..586
+- 截取到 y=573，留出 11px 安全距离
+- 确保镜像拼接时不会包含金线像素
+
+#### 2. 镜像函数相位调整 / Mirror Function Phase Adjustment
+
+**关键设计**: b1 必须**倒序**开始，与上方石砖无缝衔接！
+
+**Key design**: b1 must start in **reverse order** to seamlessly connect with the stone brick above!
+
+```cpp
+// 原始 wide_mirror()（b1 正序开始）→ 错误！
+// Original wide_mirror() (b1 starts in forward order) → Wrong!
+int wide_mirror(int k, int per) {
+    int t = k / per, r = k % per;
+    return (t & 1) ? per - 1 - r : r;  // 0: 正序, 1: 倒序
+}
+
+// 修改后 wide_mirror()（b1 倒序开始）→ 正确！
+// Modified wide_mirror() (b1 starts in reverse order) → Correct!
+int wide_mirror(int k, int per) {
+    int t = k / per, r = k % per;
+    return (t & 1) ? r : per - 1 - r;  // 0: 倒序, 1: 正序
+}
+```
+
+**拼接顺序对比 / Sequence Comparison**:
+
+| 方案 | 顺序 | 效果 |
+|------|------|------|
+| ❌ 原始 | p b p b p b p b | b1 正序，与上方石砖断裂 |
+| ✅ 修改 | b p b p b p b p | b1 倒序，与上方石砖无缝衔接 |
+
+| Approach | Sequence | Effect |
+|----------|----------|--------|
+| ❌ Original | p b p b p b p b | b1 forward, breaks with stone above |
+| ✅ Modified | b p b p b p b p | b1 reverse, seamlessly connects with stone above |
+
+**形象理解 / Visual Understanding**:
+```
+上方石砖（y=300..583）: [A][B][C][D]...（正序）
+                              ↓
+拼接区 b1（y=584..857）: ...[D][C][B][A]（倒序，镜像衔接）
+                              ↓
+拼接区 b2（y=858..1131）: [A][B][C][D]...（正序）
+                              ↓
+拼接区 b3（y=1132..1405）: ...[D][C][B][A]（倒序）
+```
+
+#### 3. 底部金线保留 / Bottom Golden Line Preservation
+
+**关键技巧**: 屏幕底部 10 行 = 原图底部 10 行（相对位置映射）
+
+**Key technique**: Screen bottom 10 rows = Original bottom 10 rows (relative position mapping)
+
+```cpp
+// 屏幕底部 10 行（y = H-10 到 H-1）
+else {
+    int ry3 = (WIDE_SRC_H - WIDE_BOTTOM_H) + (y - (H - WIDE_BOTTOM_H));
+    // 即：ry3 = 590 + (y - (H-10))
+    v = src[ry3 * WIDE_SRC_W + WIDE_LEFT_W + (x - rx)];
+}
+```
+
+**为什么金线永远对齐？/ Why is the golden line always aligned?**
+
+因为用了**相对偏移**！无论屏幕高度 H 是多少，屏幕底部 10 行永远对应原图底部 10 行。
+
+**Relative offset ensures alignment at any resolution!**
+
+```
+屏幕底部 10 行 ↔ 原图底部 10 行
+     ↓                    ↓
+   H-10    →    590（原图）
+   H-9     →    591
+   ...            ...
+   H-4     →    596（金线！）← 无论 H 是多少，金线永远在 H-4
+   ...            ...
+   H-1     →    599
+```
+
+**任何分辨率下，金线都出现在屏幕底部倒数第 4 行！**
+
+**At any resolution, the golden line appears at the 4th row from the bottom!**
+
+### 完整代码实现 / Complete Code Implementation
+
+```cpp
+// 右侧竖条处理逻辑（wide_compose 函数内）
+if (x >= rx && x < rx + 224) {  // right block
+    if (y < H - WIDE_BOTTOM_H) {  // y < H-10
+        if (y < WIDE_GOLD_LINE_Y) {  // y < 584
+            // 第1层：直接复制（按钮区、小地图、石砖区）
+            v = src[y * WIDE_SRC_W + WIDE_LEFT_W + (x - rx)];
+        } else {
+            // 第2层：镜像拼接（y=584..H-11，金线消失！）
+            int k = y - WIDE_GOLD_LINE_Y;
+            int idx = wide_mirror(k, WIDE_RPANEL_CROP_H);
+            int ry2 = WIDE_RPANEL_CROP_Y0 + idx;
+            v = src[ry2 * WIDE_SRC_W + WIDE_LEFT_W + (x - rx)];
+        }
+    } else {
+        // 第3层：底部 10 行（保留金线收边）
+        int ry3 = (WIDE_SRC_H - WIDE_BOTTOM_H) + (y - (H - WIDE_BOTTOM_H));
+        if (ry3 >= WIDE_SRC_H) ry3 = WIDE_SRC_H - 1;
+        v = src[ry3 * WIDE_SRC_W + WIDE_LEFT_W + (x - rx)];
+    }
+}
+```
+
+### 三层结构总结 / Three-Layer Structure Summary
+
+| 层级 | 行范围 | 内容 | 来源 | 处理方式 |
+|------|--------|------|------|----------|
+| **第1层** | y=0..583 | 按钮、小地图、石砖 | 原图 y=0..583 | 直接复制 |
+| **第2层** | y=584..H-11 | 石砖镜像延伸 | 原图 y=300..573 | 镜像拼接（b1 倒序） |
+| **第3层** | y=H-10..H-1 | 底部金线收边 | 原图 y=590..599 | 直接复制（相对映射） |
+
+| Layer | Row Range | Content | Source | Handling |
+|-------|-----------|---------|--------|----------|
+| **1** | y=0..583 | Buttons, minimap, stone | Original y=0..583 | Direct copy |
+| **2** | y=584..H-11 | Stone mirror extension | Original y=300..573 | Mirror-tile (b1 reverse) |
+| **3** | y=H-10..H-1 | Bottom golden line | Original y=590..599 | Direct copy (relative mapping) |
+
+### 效果展示 / Effect Demonstration
+
+**1920x1080 分辨率下的右侧竖条布局**:
+
+```
+y=0..99:     按钮区（直接复制）
+y=100..249:  小地图区（直接复制）
+y=250..299:  小地图边框（直接复制）
+y=300..583:  石砖区（直接复制）
+y=584..857:  镜像拼接 b1（倒序，与上方无缝衔接）← 金线消失！
+y=858..1131: 镜像拼接 b2（正序）
+y=1132..1405: 镜像拼接 b3（倒序）
+y=1406..1439: 镜像拼接 b4（正序）
+y=1440..1449: 底部边框（直接复制，保留金线）← 屏幕底部 H-10..H-1
+```
+
+**结果 / Result**:
+- ✅ 中间无金线分割，浑然一体
+- ✅ 石砖纹理 seamless 延伸，无重复感
+- ✅ 底部金线收边，完整收尾
+- ✅ 任何分辨率下效果一致
+
+### 技术要点总结 / Technical Summary
+
+1. **金线精确定位**：通过像素值分析，找到金线在 y=584..586（不是 596）
+2. **截取区域优化**：y=300..573（274 行），避开金线，留 10px 缓冲
+3. **镜像相位调整**：b1 倒序开始，与上方石砖无缝衔接
+4. **底部相对映射**：屏幕底部 10 行 = 原图底部 10 行，金线永远对齐
+
+**Technical highlights**:
+1. **Precise golden line location**: Pixel analysis found golden line at y=584..586 (not 596)
+2. **Optimized crop region**: y=300..573 (274 rows), avoiding golden line with 10px buffer
+3. **Mirror phase adjustment**: b1 starts in reverse order for seamless connection
+4. **Bottom relative mapping**: Screen bottom 10 rows = original bottom 10 rows, golden line always aligned
+
+### 与早期方案对比 / Comparison with Early Approach
+
+| 特性 | 早期方案 | 本方案 |
+|------|----------|--------|
+| y=600..H-1 | 黑色或重复 | 石砖镜像延伸 |
+| 中间分割线 | 明显金线 | 无缝衔接 |
+| 底部收边 | 无 | 金线收边 |
+| 观感 | 三等分（操作/石砖/空白） | 浑然一体 |
+
+| Feature | Early Approach | This Approach |
+|---------|----------------|---------------|
+| y=600..H-1 | Black or repeated | Stone mirror extension |
+| Middle separator | Obvious golden line | Seamless connection |
+| Bottom edge | None | Golden line finish |
+| Visual | Three sections (op/stone/blank) | Unified whole |
