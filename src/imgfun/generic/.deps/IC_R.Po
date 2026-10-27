@@ -1,0 +1,6 @@
+IC_R.o: IC_R.cpp /usr/include/stdc-predef.h ../../../include/config.h \
+ ../../../include/IMGFUN.h ../../../include/asmfun.h
+/usr/include/stdc-predef.h:
+../../../include/config.h:
+../../../include/IMGFUN.h:
+../../../include/asmfun.h:

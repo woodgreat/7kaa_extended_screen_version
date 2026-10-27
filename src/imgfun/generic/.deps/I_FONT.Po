@@ -1,0 +1,6 @@
+I_FONT.o: I_FONT.cpp /usr/include/stdc-predef.h ../../../include/config.h \
+ ../../../include/IMGFUN.h ../../../include/asmfun.h
+/usr/include/stdc-predef.h:
+../../../include/config.h:
+../../../include/IMGFUN.h:
+../../../include/asmfun.h:

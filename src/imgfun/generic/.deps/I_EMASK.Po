@@ -1,0 +1,7 @@
+I_EMASK.o: I_EMASK.cpp /usr/include/stdc-predef.h \
+ ../../../include/config.h ../../../include/IMGFUN.h \
+ ../../../include/asmfun.h
+/usr/include/stdc-predef.h:
+../../../include/config.h:
+../../../include/IMGFUN.h:
+../../../include/asmfun.h:
